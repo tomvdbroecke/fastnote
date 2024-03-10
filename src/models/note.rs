@@ -14,7 +14,7 @@ pub struct UpdateNotesUrl {
     pub uuid: String,
 }
 
-#[derive(Validate, Serialize, Deserialize)]
+#[derive(Validate, Serialize, Deserialize, Debug)]
 pub struct Note {
     pub uuid: String,
     pub title: String,

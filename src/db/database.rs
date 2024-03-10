@@ -1,8 +1,7 @@
+use crate::models::note::Note;
 use surrealdb::engine::remote::ws::{Client, Ws};
 use surrealdb::opt::auth::Root;
 use surrealdb::{Error, Surreal};
-
-use crate::models::note::Note;
 
 #[derive(Clone)]
 pub struct Database {
@@ -33,9 +32,21 @@ impl Database {
     }
 
     pub async fn get_notes(&self) -> Option<Vec<Note>> {
-        let result = self.client.select("notes").await;
+        let result = self.client.select("note").await;
         match result {
             Ok(notes) => Some(notes),
+            Err(_) => None,
+        }
+    }
+
+    pub async fn create_note(&self, new_note: Note) -> Option<Note> {
+        let created_note = self
+            .client
+            .create(("note", new_note.uuid.clone()))
+            .content(new_note)
+            .await;
+        match created_note {
+            Ok(note) => note,
             Err(_) => None,
         }
     }
