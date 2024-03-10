@@ -1,8 +1,11 @@
 // Modules
+mod db;
 mod models;
 
 // Uses
+use crate::db::Database;
 use crate::models::{CreateNoteRequest, UpdateNotesUrl};
+use actix_web::web::Data;
 use actix_web::{
     get, patch, post,
     web::{Json, Path},
@@ -12,8 +15,12 @@ use validator::Validate;
 
 // GET /notes (move this later)
 #[get("/notes")]
-async fn get_notes() -> impl Responder {
-    HttpResponse::Ok().body("GET /notes")
+async fn get_notes(db: Data<Database>) -> impl Responder {
+    let notes = db.get_notes().await;
+    match notes {
+        Some(notes) => HttpResponse::Ok().json(notes),
+        None => HttpResponse::InternalServerError().finish(),
+    }
 }
 
 // POST /notes (move this later)
@@ -33,11 +40,21 @@ async fn update_notes(update_notes_url: Path<UpdateNotesUrl>) -> impl Responder 
     HttpResponse::Ok().body(format!("Updating the note with uuid: {uuid}"))
 }
 
+// @todo:
+// - Can we get rid of the clone?
 // Main function
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    HttpServer::new(|| {
+    // Initialize the database
+    let db = Database::init()
+        .await
+        .expect("Failed to initialize the database");
+    let db_data = Data::new(db);
+
+    // Start the server
+    HttpServer::new(move || {
         actix_web::App::new()
+            .app_data(db_data.clone())
             .service(get_notes)
             .service(create_notes)
             .service(update_notes)
