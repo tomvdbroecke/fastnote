@@ -42,11 +42,36 @@ impl Database {
     pub async fn create_note(&self, new_note: Note) -> Option<Note> {
         let created_note = self
             .client
-            .create(("note", new_note.uuid.clone()))
+            .create(("note", &new_note.uuid))
             .content(new_note)
             .await;
         match created_note {
             Ok(note) => note,
+            Err(_) => None,
+        }
+    }
+
+    pub async fn update_note(&self, uuid: String) -> Option<Note> {
+        let find_note: Result<Option<Note>, Error> = self.client.select(("note", &uuid)).await;
+        match find_note {
+            Ok(found) => match found {
+                Some(_) => {
+                    let updated_note: Result<Option<Note>, Error> = self
+                        .client
+                        .update(("note", &uuid))
+                        .merge(Note {
+                            uuid,
+                            title: "Updated Title".to_string(),
+                            body: "Updated Body".to_string(),
+                        })
+                        .await;
+                    match updated_note {
+                        Ok(note) => note,
+                        Err(_) => None,
+                    }
+                }
+                None => None,
+            },
             Err(_) => None,
         }
     }

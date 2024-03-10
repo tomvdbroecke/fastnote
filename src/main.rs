@@ -1,5 +1,6 @@
 // Modules
 mod db;
+mod error;
 mod models;
 
 // Uses
@@ -9,24 +10,28 @@ use actix_web::web::Data;
 use actix_web::{
     get, patch, post,
     web::{Json, Path},
-    HttpResponse, HttpServer, Responder,
+    HttpServer,
 };
+use error::NoteError;
 use uuid::Uuid;
 use validator::Validate;
 
 // GET /notes (move this later)
 #[get("/notes")]
-async fn get_notes(db: Data<Database>) -> impl Responder {
+async fn get_notes(db: Data<Database>) -> Result<Json<Vec<Note>>, NoteError> {
     let notes = db.get_notes().await;
     match notes {
-        Some(notes) => HttpResponse::Ok().json(notes),
-        None => HttpResponse::InternalServerError().finish(),
+        Some(notes) => Ok(Json(notes)),
+        None => Err(NoteError::NotFound),
     }
 }
 
 // POST /notes (move this later)
 #[post("/notes")]
-async fn create_note(body: Json<CreateNoteRequest>, db: Data<Database>) -> impl Responder {
+async fn create_note(
+    body: Json<CreateNoteRequest>,
+    db: Data<Database>,
+) -> Result<Json<Note>, NoteError> {
     let is_valid = body.validate();
     match is_valid {
         Ok(_) => {
@@ -41,19 +46,27 @@ async fn create_note(body: Json<CreateNoteRequest>, db: Data<Database>) -> impl 
                 .await;
 
             match new_note {
-                Some(note) => HttpResponse::Ok().json(note),
-                None => HttpResponse::InternalServerError().finish(),
+                Some(note) => Ok(Json(note)),
+                None => Err(NoteError::CouldNotCreate),
             }
         }
-        Err(e) => HttpResponse::BadRequest().json(e),
+        Err(_) => Err(NoteError::CouldNotCreate),
     }
 }
 
 // PATCH /notes (move this later)
 #[patch("/notes/{uuid}")]
-async fn update_note(update_notes_url: Path<UpdateNotesUrl>) -> impl Responder {
+async fn update_note(
+    update_notes_url: Path<UpdateNotesUrl>,
+    db: Data<Database>,
+) -> Result<Json<Note>, NoteError> {
     let uuid = update_notes_url.into_inner().uuid;
-    HttpResponse::Ok().body(format!("Updating the note with uuid: {uuid}"))
+    let update_result = db.update_note(uuid).await;
+
+    match update_result {
+        Some(note) => Ok(Json(note)),
+        None => Err(NoteError::NotFound),
+    }
 }
 
 // @todo:
