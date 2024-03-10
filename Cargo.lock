@@ -1036,13 +1036,14 @@ dependencies = [
 
 [[package]]
 name = "fastnote"
-version = "0.1.0"
+version = "0.1.4"
 dependencies = [
  "actix-web",
  "async-trait",
  "derive_more",
  "json",
  "serde",
+ "serde_json",
  "surrealdb",
  "uuid",
  "validator",

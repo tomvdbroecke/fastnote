@@ -16,6 +16,9 @@ use error::NoteError;
 use uuid::Uuid;
 use validator::Validate;
 
+// @todo:
+// - Add validation error handling
+
 // GET /notes (move this later)
 #[get("/notes")]
 async fn get_notes(db: Data<Database>) -> Result<Json<Vec<Note>>, NoteError> {
