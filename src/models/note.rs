@@ -8,3 +8,8 @@ pub struct CreateNoteRequest {
     #[validate(length(min = 1, max = 1000))]
     pub body: String,
 }
+
+#[derive(Validate, Serialize, Deserialize)]
+pub struct UpdateNotesUrl {
+    pub uuid: String,
+}
