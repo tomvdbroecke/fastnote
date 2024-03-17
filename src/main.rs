@@ -6,18 +6,20 @@ mod models;
 // Uses
 use crate::db::Database;
 use crate::models::{CreateNoteRequest, Note, UpdateNotesUrl};
+use actix_web::body::{BoxBody, EitherBody};
+use actix_web::dev;
+use actix_web::http::header;
+use actix_web::middleware::{ErrorHandlerResponse, ErrorHandlers};
 use actix_web::web::Data;
 use actix_web::{
     get, patch, post,
     web::{Json, Path},
-    HttpServer,
+    HttpServer, Result,
 };
 use error::NoteError;
+use serde_json::json;
 use uuid::Uuid;
 use validator::Validate;
-
-// @todo:
-// - Add validation error handling
 
 // GET /notes (move this later)
 #[get("/notes")]
@@ -72,6 +74,31 @@ async fn update_note(
     }
 }
 
+// Error handler
+fn error_handler<B>(mut res: dev::ServiceResponse<B>) -> Result<ErrorHandlerResponse<BoxBody>> {
+    let error_message = if let Some(error) = res.response().error() {
+        error.to_string()
+    } else {
+        "An error occurred".to_string()
+    };
+
+    let error_response = json!({
+        "error": res.response().status().as_str(),
+        "message": error_message
+    });
+
+    let new_body = EitherBody::new(BoxBody::new(error_response.to_string()));
+
+    res.response_mut().headers_mut().insert(
+        header::CONTENT_TYPE,
+        header::HeaderValue::from_static("application/json"),
+    );
+
+    let new_res = res.map_body(|_, _| new_body);
+
+    Ok(ErrorHandlerResponse::Response(new_res))
+}
+
 // @todo:
 // - Can we get rid of the clone?
 // Main function
@@ -86,6 +113,7 @@ async fn main() -> std::io::Result<()> {
     // Start the server
     HttpServer::new(move || {
         actix_web::App::new()
+            .wrap(ErrorHandlers::new().default_handler(error_handler))
             .app_data(db_data.clone())
             .service(get_notes)
             .service(create_note)
